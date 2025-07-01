@@ -36,7 +36,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-              안녕하세요, <span className="text-blue-600">개발자</span>입니다
+              안녕하세요! 
+              <br></br>
+              <span className="text-blue-600">개발자 안광윤</span>입니다
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
               창의적인 문제 해결과 혁신적인 기술로 더 나은 디지털 경험을 만들어갑니다.
