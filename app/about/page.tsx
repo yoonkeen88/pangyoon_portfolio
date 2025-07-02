@@ -1,147 +1,409 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Download, Mail, Github, Linkedin } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Download, Mail, Github, Linkedin, Edit, Save, X, MapPin, Phone } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { getFullProfile, updateProfile, updateAboutSection, deleteAboutSection } from "@/lib/profile-service"
+import type { Profile, AboutSection, Skill, Education, Interest } from "@/lib/profile-service"
 
 export default function AboutPage() {
-  const skills = ["JavaScript", "TypeScript", "React", "Next.js", "Node.js", "Python", "SQL", "Git", "Docker", "AWS"]
+  const { user } = useAuth()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [aboutSections, setAboutSections] = useState<AboutSection[]>([])
+  const [skills, setSkills] = useState<Skill[]>([])
+  const [educations, setEducations] = useState<Education[]>([])
+  const [interests, setInterests] = useState<Interest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editMode, setEditMode] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<Partial<Profile>>({})
+  const [editingSections, setEditingSections] = useState<{ [key: string]: AboutSection }>({})
 
-  const interests = ["웹 개발", "데이터 분석", "UI/UX 디자인", "오픈소스", "머신러닝", "클라우드 컴퓨팅"]
+  useEffect(() => {
+    loadProfileData()
+  }, [])
+
+  const loadProfileData = async () => {
+    try {
+      const data = await getFullProfile()
+      if (data) {
+        setProfile(data.profile)
+        setAboutSections(data.aboutSections)
+        setSkills(data.skills)
+        setEducations(data.educations)
+        setInterests(data.interests)
+      }
+    } catch (error) {
+      console.error("Error loading profile data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEditProfile = () => {
+    setEditMode(true)
+    setEditingProfile(profile || {})
+  }
+
+  const handleSaveProfile = async () => {
+    if (!user || !profile) return
+
+    try {
+      const updatedProfile = await updateProfile(user.id, editingProfile)
+      if (updatedProfile) {
+        setProfile(updatedProfile)
+        setEditMode(false)
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditMode(false)
+    setEditingProfile({})
+    setEditingSections({})
+  }
+
+  const handleEditSection = (section: AboutSection) => {
+    setEditingSections({
+      ...editingSections,
+      [section.id]: { ...section },
+    })
+  }
+
+  const handleSaveSection = async (sectionId: string) => {
+    const section = editingSections[sectionId]
+    if (!section) return
+
+    try {
+      const updatedSection = await updateAboutSection(sectionId, section)
+      if (updatedSection) {
+        setAboutSections(aboutSections.map((s) => (s.id === sectionId ? updatedSection : s)))
+        const newEditingSections = { ...editingSections }
+        delete newEditingSections[sectionId]
+        setEditingSections(newEditingSections)
+      }
+    } catch (error) {
+      console.error("Error updating section:", error)
+    }
+  }
+
+  const handleDeleteSection = async (sectionId: string) => {
+    if (!confirm("이 섹션을 삭제하시겠습니까?")) return
+
+    try {
+      const success = await deleteAboutSection(sectionId)
+      if (success) {
+        setAboutSections(aboutSections.filter((s) => s.id !== sectionId))
+      }
+    } catch (error) {
+      console.error("Error deleting section:", error)
+    }
+  }
+
+  const isOwner = user && profile && user.id === profile.user_id
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center gradient-bg">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">프로필을 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">프로필을 찾을 수 없습니다</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">데이터베이스 연결을 확인해주세요.</p>
+          <Button asChild>
+            <a href="/">홈으로 돌아가기</a>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden">
-            <img src="/placeholder.svg?height=128&width=128" alt="프로필 사진" className="w-full h-full object-cover" />
+          <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-blue-200 dark:border-blue-800">
+            <img
+              src={profile.avatar_url || "/placeholder.svg?height=128&width=128"}
+              alt="프로필 사진"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">안녕하세요, 성장하는 개발자 안광윤입니다</h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
-            창의적인 문제 해결과 혁신적인 기술로 더 나은 디지털 경험을 추구합니다
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Button>
-              <Download className="mr-2 h-4 w-4" />
-              이력서 다운로드
-            </Button>
-            <Button variant="outline">
-              <Mail className="mr-2 h-4 w-4" />
-              연락하기
-            </Button>
-          </div>
+
+          {editMode ? (
+            <div className="space-y-4 max-w-md mx-auto">
+              <Input
+                value={editingProfile.name || ""}
+                onChange={(e) => setEditingProfile({ ...editingProfile, name: e.target.value })}
+                className="text-center text-2xl font-bold"
+                placeholder="이름"
+              />
+              <Input
+                value={editingProfile.title || ""}
+                onChange={(e) => setEditingProfile({ ...editingProfile, title: e.target.value })}
+                className="text-center text-lg"
+                placeholder="직책"
+              />
+              <Textarea
+                value={editingProfile.bio || ""}
+                onChange={(e) => setEditingProfile({ ...editingProfile, bio: e.target.value })}
+                className="text-center"
+                placeholder="소개"
+                rows={3}
+              />
+              <div className="flex justify-center space-x-2">
+                <Button onClick={handleSaveProfile} size="sm">
+                  <Save className="mr-2 h-4 w-4" />
+                  저장
+                </Button>
+                <Button onClick={handleCancelEdit} variant="outline" size="sm">
+                  <X className="mr-2 h-4 w-4" />
+                  취소
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                안녕하세요, {profile.name}입니다
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-2">{profile.title}</p>
+              <p className="text-lg text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">{profile.bio}</p>
+
+              {/* Contact Info */}
+              <div className="flex flex-wrap justify-center gap-4 mb-6 text-sm text-gray-600 dark:text-gray-400">
+                {profile.location && (
+                  <div className="flex items-center">
+                    <MapPin className="mr-1 h-4 w-4" />
+                    {profile.location}
+                  </div>
+                )}
+                {profile.phone && (
+                  <div className="flex items-center">
+                    <Phone className="mr-1 h-4 w-4" />
+                    {profile.phone}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-center space-x-4">
+                {profile.resume_url && (
+                  <Button asChild>
+                    <a href={profile.resume_url} target="_blank" rel="noopener noreferrer">
+                      <Download className="mr-2 h-4 w-4" />
+                      이력서 다운로드
+                    </a>
+                  </Button>
+                )}
+                {profile.email && (
+                  <Button variant="outline" asChild>
+                    <a href={`mailto:${profile.email}`}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      연락하기
+                    </a>
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button onClick={handleEditProfile} variant="ghost" size="sm">
+                    <Edit className="mr-2 h-4 w-4" />
+                    편집
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* About Me */}
-        <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm mb-8">
-          <CardHeader>
-            <CardTitle>소개</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-gray-700 dark:text-gray-300">
-              안녕하세요! 저는 풀스택 개발자로, 사용자 중심의 웹 애플리케이션을 개발하는 것에 열정을 가지고
-              있습니다. React와 Next.js를 주로 사용하여 프론트엔드를 개발하고, Node.js와 Python으로 백엔드 시스템을
-              구축합니다.
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              통계학을 전공하며 데이터 분석과 머신러닝에도 관심을 가지고 있어, Python과 R을 활용한 데이터 분석 프로젝트와 예측 모델 구축
-              프로젝트를 진행한 바 있습니다. 새로운 기술을 학습하고 이를 실제 프로젝트에 적용하는 것을 즐깁니다.
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              개발자로서 단순히 코드를 작성하는 것을 넘어서, 사용자의 문제를 해결하고 비즈니스 가치를 창출하는 솔루션을
-              만드는 것이 목표입니다.
-            </p>
-          </CardContent>
-        </Card>
+        {/* About Sections */}
+        {aboutSections.map((section) => (
+          <Card key={section.id} className="glass mb-8">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{section.title}</CardTitle>
+              {isOwner && (
+                <div className="flex space-x-2">
+                  {editingSections[section.id] ? (
+                    <>
+                      <Button onClick={() => handleSaveSection(section.id)} size="sm">
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const newEditingSections = { ...editingSections }
+                          delete newEditingSections[section.id]
+                          setEditingSections(newEditingSections)
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button onClick={() => handleEditSection(section)} variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button onClick={() => handleDeleteSection(section.id)} variant="ghost" size="sm">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {editingSections[section.id] ? (
+                <div className="space-y-4">
+                  <Input
+                    value={editingSections[section.id].title}
+                    onChange={(e) =>
+                      setEditingSections({
+                        ...editingSections,
+                        [section.id]: { ...editingSections[section.id], title: e.target.value },
+                      })
+                    }
+                    placeholder="섹션 제목"
+                  />
+                  <Textarea
+                    value={editingSections[section.id].content}
+                    onChange={(e) =>
+                      setEditingSections({
+                        ...editingSections,
+                        [section.id]: { ...editingSections[section.id], content: e.target.value },
+                      })
+                    }
+                    placeholder="섹션 내용"
+                    rows={4}
+                  />
+                </div>
+              ) : (
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                  {section.content}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
 
         {/* Skills */}
-        <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm mb-8">
+        <Card className="glass mb-8">
           <CardHeader>
             <CardTitle>기술 스택</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {skills.map((skill) => (
-                <Badge key={skill} variant="secondary" className="text-sm">
-                  {skill}
-                </Badge>
+                <div key={skill.id} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Badge variant="secondary" className="text-sm">
+                      {skill.name}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{skill.years_of_experience}년</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${skill.proficiency}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center">{skill.proficiency}%</p>
+                </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
         {/* Interests */}
-        <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm mb-8">
+        <Card className="glass mb-8">
           <CardHeader>
             <CardTitle>관심 분야</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid md:grid-cols-2 gap-6">
               {interests.map((interest) => (
-                <Badge key={interest} variant="outline" className="text-sm">
-                  {interest}
-                </Badge>
+                <div key={interest.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{interest.name}</h3>
+                  {interest.description && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{interest.description}</p>
+                  )}
+                </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
         {/* Education & Certifications */}
-        <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm mb-8">
+        <Card className="glass mb-8">
           <CardHeader>
             <CardTitle>학력 및 자격증</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">통계학,철학 학사</h3>
-              <p className="text-gray-600 dark:text-gray-400">인하대학교 (2020 - 2026)</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">정보처리기사</h3>
-              <p className="text-gray-600 dark:text-gray-400">한국산업인력공단 (2022)</p>
-            </div>
-             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">ADsP</h3>
-              <p className="text-gray-600 dark:text-gray-400">한국데이터산업진증원 (2022)</p>
-            </div>
-             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">빅데이터분석기사</h3>
-              <p className="text-gray-600 dark:text-gray-400">한국데이터산업진증원 (2022)</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">K-Software Empowerment Bootcamp 3기 수료</h3>
-              <p className="text-gray-600 dark:text-gray-400">정보통신기획평가원 (2023)</p>
-            </div>
-             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">AWS Solutions Architect Associate</h3>
-              <p className="text-gray-600 dark:text-gray-400">Amazon Web Services (2023)</p>
-            </div>
+          <CardContent className="space-y-6">
+            {educations.map((education) => (
+              <div key={education.id} className="border-l-4 border-blue-500 pl-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {education.degree || education.field_of_study}
+                </h3>
+                <p className="text-blue-600 dark:text-blue-400 font-medium">{education.institution}</p>
+                {education.start_date && (
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    {education.start_date} - {education.is_current ? "현재" : education.end_date}
+                  </p>
+                )}
+                {education.description && (
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-2">{education.description}</p>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
 
         {/* Contact */}
-        <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+        <Card className="glass">
           <CardHeader>
             <CardTitle>연락처</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href="mailto:rhkddbs0808@naver.com" className="flex-1">
-                <Button variant="outline" className="w-full">
-                  <Mail className="mr-2 h-4 w-4" />
-                  이메일 보내기
+              {profile.email && (
+                <Button variant="outline" className="flex-1 bg-transparent" asChild>
+                  <a href={`mailto:${profile.email}`}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    {profile.email}
+                  </a>
                 </Button>
-              </a>
-              <a href="https://github.com/yoonkeen88" target="_blank" rel="noopener noreferrer" className="flex-1">
-                <Button variant="outline" className="w-full">
-                  <Github className="mr-2 h-4 w-4" />
-                  GitHub
+              )}
+              {profile.github_url && (
+                <Button variant="outline" className="flex-1 bg-transparent" asChild>
+                  <a href={profile.github_url} target="_blank" rel="noopener noreferrer">
+                    <Github className="mr-2 h-4 w-4" />
+                    GitHub
+                  </a>
                 </Button>
-              </a>
-              <Button variant="outline" className="flex-1">
-                <Linkedin className="mr-2 h-4 w-4" />
-                LinkedIn
-              </Button>
+              )}
+              {profile.linkedin_url && (
+                <Button variant="outline" className="flex-1 bg-transparent" asChild>
+                  <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
+                    <Linkedin className="mr-2 h-4 w-4" />
+                    LinkedIn
+                  </a>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

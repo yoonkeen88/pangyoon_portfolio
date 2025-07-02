@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Carousel } from "@/components/carousel"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,182 +9,81 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Calendar, Eye, ArrowRight, Play, BookOpen, Wrench } from "lucide-react"
 import { TagSidebar } from "@/components/tag-sidebar"
+import { getBlogPosts, getPopularTags, searchBlogPosts, type BlogPost } from "@/lib/blog-service"
 
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [posts, setPosts] = useState<BlogPost[]>([])
+  const [featuredPosts, setFeaturedPosts] = useState<BlogPost[]>([])
+  const [tags, setTags] = useState<Array<{ name: string; count: number }>>([])
+  const [loading, setLoading] = useState(true)
 
-  const featuredPosts = [
-    {
-      id: "1",
-      title: "React 18의 새로운 기능들",
-      description: "Concurrent Features와 Suspense를 중심으로 살펴보는 React 18의 주요 변화점",
-      image: "/placeholder.svg?height=200&width=400",
-      link: "/blog/react-18-features",
-    },
-    {
-      id: "2",
-      title: "Next.js 13 App Router 완전 정복",
-      description: "새로운 App Router의 모든 것을 실제 예제와 함께 알아보세요",
-      image: "/placeholder.svg?height=200&width=400",
-      link: "/blog/nextjs-13-app-router",
-    },
-    {
-      id: "3",
-      title: "TypeScript 고급 타입 활용법",
-      description: "실무에서 유용한 TypeScript 고급 타입 패턴들을 소개합니다",
-      image: "/placeholder.svg?height=200&width=400",
-      link: "/blog/typescript-advanced-types",
-    },
-  ]
+  useEffect(() => {
+    loadInitialData()
+  }, [])
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "React 18의 새로운 기능들",
-      excerpt: "Concurrent Features와 Suspense를 중심으로 살펴보는 React 18의 주요 변화점을 자세히 알아보겠습니다.",
-      slug: "react-18-features",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["React", "JavaScript", "Frontend", "웹개발"],
-      viewCount: 1250,
-      createdAt: "2024-01-15",
-      readTime: "8분",
-      contentType: "article", // 추가
-    },
-    {
-      id: 2,
-      title: "Next.js 13 App Router 완전 정복",
-      excerpt:
-        "새로운 App Router의 모든 것을 실제 예제와 함께 알아보고, 기존 Pages Router와의 차이점을 비교해보겠습니다.",
-      slug: "nextjs-13-app-router",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["Next.js", "React", "SSR", "웹개발", "Frontend"],
-      viewCount: 980,
-      createdAt: "2024-01-10",
-      readTime: "12분",
-      contentType: "video", // 추가
-    },
-    {
-      id: 3,
-      title: "TypeScript 고급 타입 활용법",
-      excerpt: "실무에서 유용한 TypeScript 고급 타입 패턴들을 소개하고, 타입 안정성을 높이는 방법을 알아보겠습니다.",
-      slug: "typescript-advanced-types",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["TypeScript", "JavaScript", "개발도구"],
-      viewCount: 756,
-      createdAt: "2024-01-05",
-      readTime: "10분",
-      contentType: "tutorial", // 추가
-    },
-    {
-      id: 4,
-      title: "Python으로 데이터 분석 시작하기",
-      excerpt: "Pandas와 Matplotlib을 활용한 기초 데이터 분석 방법을 단계별로 설명합니다.",
-      slug: "python-data-analysis-basics",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["Python", "데이터분석", "Pandas", "시각화"],
-      viewCount: 642,
-      createdAt: "2023-12-28",
-      readTime: "15분",
-      contentType: "article",
-    },
-    {
-      id: 5,
-      title: "머신러닝 모델 성능 최적화 기법",
-      excerpt: "실제 프로젝트에서 사용할 수 있는 머신러닝 모델의 성능을 향상시키는 다양한 기법들을 소개합니다.",
-      slug: "ml-model-optimization",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["머신러닝", "Python", "AI", "데이터분석"],
-      viewCount: 834,
-      createdAt: "2023-12-25",
-      readTime: "20분",
-      contentType: "article",
-    },
-    {
-      id: 6,
-      title: "Supabase로 풀스택 앱 만들기",
-      excerpt: "Supabase를 활용해서 인증, 데이터베이스, 실시간 기능을 포함한 풀스택 애플리케이션을 구축해보겠습니다.",
-      slug: "fullstack-app-with-supabase",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["Supabase", "Fullstack", "Database", "Backend"],
-      viewCount: 523,
-      createdAt: "2023-12-20",
-      readTime: "18분",
-      contentType: "tutorial",
-    },
-    {
-      id: 7,
-      title: "Docker로 개발 환경 구축하기",
-      excerpt: "Docker를 활용해서 일관된 개발 환경을 구축하고, 팀 협업을 효율적으로 만드는 방법을 알아보겠습니다.",
-      slug: "docker-development-environment",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["Docker", "DevOps", "개발환경", "컨테이너"],
-      viewCount: 712,
-      createdAt: "2023-12-18",
-      readTime: "14분",
-      contentType: "article",
-    },
-    {
-      id: 8,
-      title: "AWS로 서버리스 아키텍처 구현하기",
-      excerpt: "AWS Lambda, API Gateway, DynamoDB를 활용한 서버리스 아키텍처 설계와 구현 방법을 다룹니다.",
-      slug: "aws-serverless-architecture",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["AWS", "서버리스", "클라우드", "Backend"],
-      viewCount: 945,
-      createdAt: "2023-12-15",
-      readTime: "22분",
-      contentType: "article",
-    },
-    {
-      id: 9,
-      title: "CSS Grid vs Flexbox 완벽 비교",
-      excerpt: "CSS Grid와 Flexbox의 차이점을 이해하고, 언제 어떤 것을 사용해야 하는지 알아보겠습니다.",
-      slug: "css-grid-vs-flexbox",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["CSS", "Layout", "Frontend", "웹디자인"],
-      viewCount: 891,
-      createdAt: "2023-12-12",
-      readTime: "7분",
-      contentType: "article",
-    },
-    {
-      id: 10,
-      title: "Git 고급 사용법과 협업 전략",
-      excerpt: "Git의 고급 기능들과 팀 프로젝트에서 효과적인 Git 워크플로우를 구축하는 방법을 소개합니다.",
-      slug: "advanced-git-collaboration",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["Git", "협업", "개발도구", "버전관리"],
-      viewCount: 678,
-      createdAt: "2023-12-10",
-      readTime: "16분",
-      contentType: "video",
-    },
-    {
-      id: 11,
-      title: "UI/UX 디자인 원칙과 실무 적용",
-      excerpt: "사용자 중심의 인터페이스 디자인 원칙과 실제 프로젝트에 적용하는 방법을 알아보겠습니다.",
-      slug: "ui-ux-design-principles",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["UI/UX", "디자인", "사용자경험", "웹디자인"],
-      viewCount: 567,
-      createdAt: "2023-12-08",
-      readTime: "11분",
-      contentType: "article",
-    },
-    {
-      id: 12,
-      title: "모바일 앱 개발: React Native vs Flutter",
-      excerpt: "크로스플랫폼 모바일 앱 개발 프레임워크인 React Native와 Flutter를 비교 분석합니다.",
-      slug: "react-native-vs-flutter",
-      featuredImage: "/placeholder.svg?height=200&width=400",
-      tags: ["모바일", "React Native", "Flutter", "크로스플랫폼"],
-      viewCount: 723,
-      createdAt: "2023-12-05",
-      readTime: "13분",
-      contentType: "article",
-    },
-  ]
+  useEffect(() => {
+    if (searchTerm) {
+      handleSearch()
+    } else if (selectedTag) {
+      loadPostsByTag()
+    } else {
+      loadAllPosts()
+    }
+  }, [selectedTag])
+
+  const loadInitialData = async () => {
+    try {
+      const [allPosts, popularTags, topPosts] = await Promise.all([
+        getBlogPosts(),
+        getPopularTags(),
+        getBlogPosts(3), // Get top 3 for featured
+      ])
+
+      setPosts(allPosts)
+      setTags(popularTags)
+      setFeaturedPosts(topPosts)
+    } catch (error) {
+      console.error("Error loading initial data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAllPosts = async () => {
+    try {
+      const allPosts = await getBlogPosts()
+      setPosts(allPosts)
+    } catch (error) {
+      console.error("Error loading posts:", error)
+    }
+  }
+
+  const loadPostsByTag = async () => {
+    if (!selectedTag) return
+
+    try {
+      const tagPosts = await getBlogPosts(undefined, selectedTag)
+      setPosts(tagPosts)
+    } catch (error) {
+      console.error("Error loading posts by tag:", error)
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) {
+      loadAllPosts()
+      return
+    }
+
+    try {
+      const searchResults = await searchBlogPosts(searchTerm)
+      setPosts(searchResults)
+    } catch (error) {
+      console.error("Error searching posts:", error)
+    }
+  }
 
   const getContentTypeDisplay = (contentType: string, readTime: string) => {
     switch (contentType) {
@@ -210,24 +109,21 @@ export default function BlogPage() {
     }
   }
 
-  const allTags = Array.from(new Set(blogPosts.flatMap((post) => post.tags)))
-  const tagCounts = allTags
-    .map((tag) => ({
-      name: tag,
-      count: blogPosts.filter((post) => post.tags.includes(tag)).length,
-    }))
-    .sort((a, b) => b.count - a.count)
+  const featuredCarouselItems = featuredPosts.map((post) => ({
+    id: post.id.toString(),
+    title: post.title,
+    description: post.excerpt,
+    image: post.featured_image || "/placeholder.svg?height=200&width=400",
+    link: `/blog/${post.slug}`,
+  }))
 
-  const filteredPosts = blogPosts.filter((post) => {
-    const matchesSearch =
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-
-    const matchesTag = selectedTag ? post.tags.includes(selectedTag) : true
-
-    return matchesSearch && matchesTag
-  })
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-16">
@@ -239,10 +135,12 @@ export default function BlogPage() {
         </div>
 
         {/* Featured Posts Carousel */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">인기 글</h2>
-          <Carousel items={featuredPosts} />
-        </section>
+        {featuredPosts.length > 0 && (
+          <section className="mb-16">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">인기 글</h2>
+            <Carousel items={featuredCarouselItems} />
+          </section>
+        )}
 
         {/* Search */}
         <div className="mb-8">
@@ -253,6 +151,7 @@ export default function BlogPage() {
               placeholder="글 제목, 내용, 태그로 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
               className="pl-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
             />
           </div>
@@ -262,7 +161,7 @@ export default function BlogPage() {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <TagSidebar tags={tagCounts} selectedTag={selectedTag} onTagSelect={setSelectedTag} />
+            <TagSidebar tags={tags} selectedTag={selectedTag} onTagSelect={setSelectedTag} />
           </div>
 
           {/* Blog Posts */}
@@ -270,10 +169,19 @@ export default function BlogPage() {
             {/* Results Info */}
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {selectedTag ? `"${selectedTag}" 태그 글` : "전체 글"} ({filteredPosts.length})
+                {selectedTag ? `"${selectedTag}" 태그 글` : searchTerm ? `"${searchTerm}" 검색 결과` : "전체 글"} (
+                {posts.length})
               </h3>
-              {selectedTag && (
-                <Button variant="outline" size="sm" onClick={() => setSelectedTag(null)}>
+              {(selectedTag || searchTerm) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedTag(null)
+                    setSearchTerm("")
+                    loadAllPosts()
+                  }}
+                >
                   필터 초기화
                 </Button>
               )}
@@ -281,7 +189,7 @@ export default function BlogPage() {
 
             {/* Blog Posts Grid */}
             <div className="grid md:grid-cols-2 gap-6">
-              {filteredPosts.map((post) => (
+              {posts.map((post) => (
                 <Card
                   key={post.id}
                   className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300 group"
@@ -289,14 +197,14 @@ export default function BlogPage() {
                   <CardContent className="p-0">
                     <div className="relative overflow-hidden">
                       <img
-                        src={post.featuredImage || "/placeholder.svg"}
+                        src={post.featured_image || "/placeholder.svg?height=200&width=400"}
                         alt={post.title}
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-4 right-4">
                         <Badge variant="secondary" className="bg-white/90 text-gray-900 flex items-center gap-1">
-                          {getContentTypeIcon(post.contentType)}
-                          {getContentTypeDisplay(post.contentType, post.readTime)}
+                          {getContentTypeIcon(post.content_type)}
+                          {getContentTypeDisplay(post.content_type, post.read_time)}
                         </Badge>
                       </div>
                     </div>
@@ -324,11 +232,11 @@ export default function BlogPage() {
                       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
                         <div className="flex items-center">
                           <Calendar className="mr-1 h-4 w-4" />
-                          {new Date(post.createdAt).toLocaleDateString("ko-KR")}
+                          {new Date(post.created_at).toLocaleDateString("ko-KR")}
                         </div>
                         <div className="flex items-center">
                           <Eye className="mr-1 h-4 w-4" />
-                          {post.viewCount.toLocaleString()}
+                          {post.view_count.toLocaleString()}
                         </div>
                       </div>
 
@@ -346,10 +254,14 @@ export default function BlogPage() {
               ))}
             </div>
 
-            {filteredPosts.length === 0 && (
+            {posts.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">
-                  {selectedTag ? `"${selectedTag}" 태그에 해당하는 글이 없습니다.` : "검색 결과가 없습니다."}
+                  {selectedTag
+                    ? `"${selectedTag}" 태그에 해당하는 글이 없습니다.`
+                    : searchTerm
+                      ? `"${searchTerm}"에 대한 검색 결과가 없습니다.`
+                      : "아직 작성된 글이 없습니다."}
                 </p>
               </div>
             )}

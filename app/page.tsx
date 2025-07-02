@@ -1,78 +1,132 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Carousel } from "@/components/carousel"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Code, Database, Palette } from "lucide-react"
+import { ArrowRight, Code, Database, Palette, Github, Linkedin, Mail } from "lucide-react"
 import Link from "next/link"
+import { getFullProfile } from "@/lib/profile-service"
+import type { Profile, Project } from "@/lib/profile-service"
 
 export default function HomePage() {
-  const featuredItems = [
-    {
-      id: "1",
-      title: "React와 Next.js로 만든 포트폴리오",
-      description: "최신 웹 기술을 활용한 반응형 포트폴리오 웹사이트입니다.",
-      image: "/placeholder.svg?height=200&width=300",
-      link: "/portfolio",
-    },
-    {
-      id: "2",
-      title: "데이터 분석 프로젝트",
-      description: "Python과 머신러닝을 활용한 데이터 분석 사례를 소개합니다.",
-      image: "/placeholder.svg?height=200&width=300",
-      link: "/blog/data-analysis",
-    },
-    {
-      id: "3",
-      title: "풀스택 개발 경험",
-      description: "프론트엔드부터 백엔드까지 전체 개발 과정을 다룹니다.",
-      image: "/placeholder.svg?height=200&width=300",
-      link: "/about",
-    },
-  ]
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [featuredProjects, setFeaturedProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadHomeData()
+  }, [])
+
+  const loadHomeData = async () => {
+    try {
+      const data = await getFullProfile()
+      if (data) {
+        setProfile(data.profile)
+        setFeaturedProjects(data.projects.filter((p) => p.is_featured).slice(0, 3))
+      }
+    } catch (error) {
+      console.error("Error loading home data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const featuredItems = featuredProjects.map((project) => ({
+    id: project.id,
+    title: project.title,
+    description: project.description,
+    image: project.image_url || "/placeholder.svg?height=200&width=300",
+    link: `/portfolio#project-${project.id}`,
+  }))
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-16 flex items-center justify-center gradient-bg">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">포트폴리오를 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 py-20">
+      <section className="gradient-bg py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
+            <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white/20">
+              <img
+                src={profile?.avatar_url || "/placeholder.svg?height=128&width=128"}
+                alt="프로필 사진"
+                className="w-full h-full object-cover"
+              />
+            </div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-              안녕하세요! 
-              <br></br>
-              <span className="text-blue-600">개발자 안광윤</span>입니다
+              안녕하세요, <span className="text-gradient">{profile?.name || "안광윤"}</span>입니다
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-              창의적인 문제 해결과 혁신적인 기술로 더 나은 디지털 경험을 만들어갑니다.
+              {profile?.bio || "창의적인 문제 해결과 혁신적인 기술로 더 나은 디지털 경험을 만들어갑니다."}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link href="/portfolio">
                 <Button size="lg" className="w-full sm:w-auto">
                   포트폴리오 보기 <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/contact">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto bg-transparent">
                   연락하기
                 </Button>
               </Link>
+            </div>
+
+            {/* Social Links */}
+            <div className="flex justify-center space-x-4">
+              {profile?.github_url && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={profile.github_url} target="_blank" rel="noopener noreferrer">
+                    <Github className="h-5 w-5" />
+                  </a>
+                </Button>
+              )}
+              {profile?.linkedin_url && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
+                    <Linkedin className="h-5 w-5" />
+                  </a>
+                </Button>
+              )}
+              {profile?.email && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={`mailto:${profile.email}`}>
+                    <Mail className="h-5 w-5" />
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Carousel */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">주요 프로젝트 & 글</h2>
-          <Carousel items={featuredItems} />
-        </div>
-      </section>
+      {/* Featured Projects Carousel */}
+      {featuredItems.length > 0 && (
+        <section className="py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">주요 프로젝트</h2>
+            <Carousel items={featuredItems} />
+          </div>
+        </section>
+      )}
 
       {/* Skills Overview */}
       <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">전문 분야</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <Card className="glass hover-lift">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Code className="mr-2 h-5 w-5 text-blue-600" />웹 개발
@@ -85,7 +139,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <Card className="glass hover-lift">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Database className="mr-2 h-5 w-5 text-green-600" />
@@ -99,7 +153,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <Card className="glass hover-lift">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Palette className="mr-2 h-5 w-5 text-purple-600" />
@@ -114,39 +168,44 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Recent Blog Posts */}
+      {/* Stats Section */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">최근 블로그 글</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">3+</div>
+              <div className="text-gray-600 dark:text-gray-300">년 경험</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-green-600 mb-2">{featuredProjects.length}+</div>
+              <div className="text-gray-600 dark:text-gray-300">완료 프로젝트</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-purple-600 mb-2">10+</div>
+              <div className="text-gray-600 dark:text-gray-300">기술 스택</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-orange-600 mb-2">100%</div>
+              <div className="text-gray-600 dark:text-gray-300">만족도</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 gradient-bg">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">함께 프로젝트를 시작해보세요</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">새로운 아이디어를 현실로 만들어드립니다</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/contact">
+              <Button size="lg">프로젝트 문의하기</Button>
+            </Link>
             <Link href="/blog">
-              <Button variant="outline">
-                모든 글 보기 <ArrowRight className="ml-2 h-4 w-4" />
+              <Button variant="outline" size="lg" className="bg-transparent">
+                블로그 둘러보기
               </Button>
             </Link>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card
-                key={i}
-                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:shadow-lg transition-shadow"
-              >
-                <CardContent className="p-6">
-                  <img
-                    src={`/placeholder.svg?height=200&width=400`}
-                    alt={`Blog post ${i}`}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                  <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">블로그 포스트 제목 {i}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    블로그 포스트의 간단한 설명이 여기에 들어갑니다...
-                  </p>
-                  <Button variant="ghost" size="sm">
-                    읽어보기 <ArrowRight className="ml-2 h-3 w-3" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
