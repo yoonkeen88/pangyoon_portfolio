@@ -9,30 +9,11 @@ export async function sendContactMessage(formData: FormData) {
   const email = formData.get("email") as string
   const subject = formData.get("subject") as string
   const message = formData.get("message") as string
-  const userId = formData.get("userId") as string
-
-  // 사용자 인증 확인
-  if (!userId) {
-    return {
-      success: false,
-      message: "로그인이 필요합니다.",
-    }
-  }
-
-  // 사용자 정보 확인
-  const { data: user, error: userError } = await supabase.from("users").select("*").eq("id", userId).single()
-
-  if (userError || !user) {
-    return {
-      success: false,
-      message: "사용자 정보를 찾을 수 없습니다.",
-    }
-  }
 
   try {
     // 연락처 메시지를 데이터베이스에 저장
     const { error: insertError } = await supabase.from("contact_messages").insert({
-      sender_id: userId,
+      sender_id: null, // 사용자 로그인 기능 제거로 sender_id는 null로 설정
       sender_name: name,
       sender_email: email,
       subject: subject,

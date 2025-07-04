@@ -1,0 +1,5 @@
+export * from "./hero-section"
+export * from "./featured-projects"
+export * from "./skills-overview"
+export * from "./stats-section"
+export * from "./cta-section"

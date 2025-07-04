@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Navbar } from "@/components/navbar"
 import { DebugInfo } from "@/components/debug-info"
-import { DevLoginHelper } from "@/components/dev-login-helper"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,8 +27,12 @@ export default function RootLayout({
           <AuthProvider>
             <Navbar />
             <main>{children}</main>
-            <DebugInfo />
-            <DevLoginHelper />
+            {process.env.NODE_ENV === 'development' && (
+              <>
+                <DebugInfo />
+                {/* <DevLoginHelper /> */}
+              </>
+            )}
           </AuthProvider>
         </ThemeProvider>
       </body>

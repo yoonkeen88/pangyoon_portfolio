@@ -1,5 +1,25 @@
 import { supabase } from "./supabase"
 
+// 블로그 포스트 가져오기
+export async function getBlogPosts() {
+  try {
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching blog posts:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error fetching blog posts:", error)
+    return []
+  }
+}
+
 // 관리자 통계 가져오기
 export async function getAdminStats() {
   try {

@@ -40,7 +40,12 @@ export default function LoginPage() {
 
       if (user) {
         await refreshUser()
-        router.push("/")
+        if (user.is_admin) {
+          router.push("/admin")
+        } else {
+          setError("관리자만 로그인할 수 있습니다.")
+          await signOut() // 비관리자 계정은 즉시 로그아웃
+        }
       }
     } catch (err) {
       setError("로그인 중 오류가 발생했습니다.")
@@ -131,10 +136,7 @@ export default function LoginPage() {
 
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  계정이 없으신가요?{" "}
-                  <Link href="/signup" className="text-blue-600 dark:text-blue-400 hover:underline">
-                    회원가입
-                  </Link>
+                  계정 생성은 관리자에게 문의하세요.
                 </p>
               </div>
             </form>

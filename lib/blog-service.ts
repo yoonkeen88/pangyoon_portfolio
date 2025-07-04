@@ -22,17 +22,6 @@ export interface BlogTag {
   count: number
 }
 
-export interface BlogComment {
-  id: number
-  content: string
-  created_at: string
-  user: {
-    id: string
-    name: string
-    avatar_url: string | null
-  }
-}
-
 export async function getBlogPosts(limit?: number, tag?: string) {
   let query = supabase
     .from("blog_posts")
@@ -129,54 +118,6 @@ export async function getPopularTags(limit = 10) {
   }
 
   return data || []
-}
-
-export async function getBlogComments(postId: number) {
-  const { data, error } = await supabase
-    .from("blog_comments")
-    .select(`
-      *,
-      users(id, name, avatar_url)
-    `)
-    .eq("post_id", postId)
-    .order("created_at", { ascending: true })
-
-  if (error) {
-    console.error("Error fetching comments:", error)
-    return []
-  }
-
-  return (
-    data?.map((comment) => ({
-      ...comment,
-      user: comment.users,
-    })) || []
-  )
-}
-
-export async function addBlogComment(postId: number, content: string, userId: string) {
-  const { data, error } = await supabase
-    .from("blog_comments")
-    .insert({
-      post_id: postId,
-      user_id: userId,
-      content: content,
-    })
-    .select(`
-      *,
-      users(id, name, avatar_url)
-    `)
-    .single()
-
-  if (error) {
-    console.error("Error adding comment:", error)
-    return null
-  }
-
-  return {
-    ...data,
-    user: data.users,
-  }
 }
 
 export async function searchBlogPosts(searchTerm: string) {
