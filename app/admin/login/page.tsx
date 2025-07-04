@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react"
-import { signIn } from "@/lib/auth-service"
+import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function LoginPage() {
@@ -31,21 +31,19 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { user, error: signInError } = await signIn(formData.email, formData.password)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
 
       if (signInError) {
-        setError(signInError)
+        setError(signInError.message)
         return
       }
 
-      if (user) {
+      if (data.user) {
         await refreshUser()
-        if (user.is_admin) {
-          router.push("/admin")
-        } else {
-          setError("관리자만 로그인할 수 있습니다.")
-          await signOut() // 비관리자 계정은 즉시 로그아웃
-        }
+        router.push("/admin")
       }
     } catch (err) {
       setError("로그인 중 오류가 발생했습니다.")
